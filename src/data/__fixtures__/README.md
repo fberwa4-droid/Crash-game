@@ -1,17 +1,14 @@
 # v1 browser-storage fixtures
 
-These fixtures must be captured from the actual Stage 1 app. Do not synthesize them from `src/data/seed.ts`: the user-data fixture must reflect real UI/service operations, and the pristine fixture must represent a real first-load state.
+Capture these from the actual Stage 1 app; do not synthesize them from `src/data/seed.ts`.
 
-## Important credential warning
+## Credential safety
+The current mock auth stores `mockPassword` in `commons:v1:users`. Use only a disposable test account and dummy password. Never export a real/reused password. Redact any accidental secret before sharing.
 
-The current mock auth stores `mockPassword` in the browser's `commons:v1:users` JSON. Use a disposable test account with a dummy password for the user-data fixture. Do not use a real/reused password. If a fixture accidentally contains a real credential, replace it with a clearly marked dummy value before uploading it; document that the redacted fixture cannot be used to test password validation.
-
-## 1. Capture the pristine fixture
-
-1. Open the existing Commons app in a clean browser profile or private window.
-2. Confirm there is no pre-existing `commons:v1:` data for that app origin.
-3. Load the app and wait for the first-load seed to complete.
-4. Open DevTools → Console and run:
+## Pristine fixture
+1. Open the app in a clean browser profile/private window for its app origin.
+2. Confirm no `commons:v1:` keys exist, then load the app and wait for seed initialization.
+3. In DevTools Console run:
 
 ```js
 const prefix = "commons:v1:";
@@ -24,18 +21,15 @@ const snapshot = Object.fromEntries(
 copy(JSON.stringify(snapshot, null, 2));
 ```
 
-5. Paste the copied JSON into `v1-pristine.json`.
+4. Save the copied JSON as `v1-pristine.json`.
 
-## 2. Capture the user-data fixture
+## User-data fixture
+1. Use a separate clean profile or reset demo data.
+2. Register a disposable user through the UI.
+3. Through available UI controls, create a post, reply to a seeded post, quote a seeded post, repost a seeded post, like/bookmark posts, follow a seeded account, and change theme. Record unavailable features (interior routes are currently stubs).
+4. Export using the same snippet and save as `v1-user-data.json`.
+5. Do not manually invent missing interactions. If using a service from the console, label it as service-generated rather than UI-generated.
 
-1. Use a separate fresh browser profile or reset the demo data, then load the app.
-2. Register a disposable test account with a unique dummy email and dummy password. Keep the new session logged in.
-3. Through actual app UI controls, create a post, a reply to a seeded post, a quote of a seeded post, a repost of a seeded post, likes and bookmarks. Follow at least one seeded account. Change the theme. Add settings/draft/recent-search state where the current Stage 1 UI allows it.
-4. Record which UI actions were available in a short accompanying note. Do not manually insert data into localStorage for the primary fixture.
-5. Run the same export snippet and save the output as `v1-user-data.json`.
+The ambient simulator auto-starts and may append `p_sim_` posts and likes/notifications; disable it for controlled capture if possible, or record its activity separately.
 
-The current Stage 1 app does not yet expose every future feature. If a record type cannot be created through current UI, record that limitation rather than inventing a record. Some service methods may be called from the browser console only if the user is comfortable doing so; any console-generated activity must be labelled as service-generated, not UI-generated.
-
-## 3. Upload
-
-Upload both JSON files to this folder in the feature branch or attach them in the project conversation. Also note the app origin and the approximate capture date/time. The audit will then compare actual seed IDs and actual user-created IDs, and the migration tests can be based on these fixtures.
+Upload both files to this directory in the feature branch or attach them to the project conversation. Include approximate capture time and app origin. At least three generated IDs per entity type should be compared where the current app can generate them.

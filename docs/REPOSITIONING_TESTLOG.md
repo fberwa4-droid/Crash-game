@@ -1,28 +1,25 @@
 # Repositioning test log
 
-## Baseline / Phase 1 read-only checks
+## Phase 1 baseline
 
-| Check | Result | Evidence / limitation |
-|---|---|---|
-| Repository and baseline commit identified | PASS | `940b4b5ad288fd70fffa1e5837f53ff6daa633c8` on `main` |
-| Repositioning branch exists at baseline | PASS | `feature/crash-research-repositioning` points to `940b4b5ad288fd70fffa1e5837f53ff6daa633c8` |
-| Stage status inspected | PASS | `BUILD_STATUS.md` reports Stage 1 complete |
-| localStorage key inventory inspected | PASS | `src/config.ts`, `src/services/storage.ts`, `BUILD_STATUS.md` |
-| Seed source and static IDs inspected | PASS | `src/data/seed.ts` |
-| Aircraft file and baseline Git blob SHA recorded | PASS | `HeroAircraftStage.tsx` SHA `44cd0c5b973302ac7ecef4fde79e463146a9f4df` |
-| Combined remote commit status | NO CHECKS REPORTED | GitHub returned an empty status list |
-| GitHub Actions runs for baseline commit | NO RUNS REPORTED | No runs returned; repository tree also has no `.github/workflows` |
-| Local TypeScript/lint command | NOT RUN | No local checkout/runtime available; package script is `tsc --noEmit` |
-| Local production build | NOT RUN | No local checkout/runtime available |
-| Automated tests | NOT RUN / NONE CONFIGURED | `package.json` has no test script and no test runner is listed |
-| Fresh localStorage boot | NOT RUN | Requires browser/app runtime |
-| v1 pristine fixture boot | BLOCKED | Real `v1-pristine.json` snapshot not yet supplied/captured |
-| v1 user-data fixture boot | BLOCKED | Real `v1-user-data.json` snapshot not yet supplied/captured |
-| Stage 1 UI smoke checklist | NOT RUN | Requires browser/app runtime |
-| 320px horizontal-scroll check | NOT RUN | Requires responsive browser session |
-| Landing screenshots / rendered text | NOT RUN | No browser automation or attached app browser session |
-| Aircraft diff guard | BASELINE RECORDED; DIFF NOT APPLICABLE YET | No source edits made in Phase 1; SHA above is the comparison baseline |
+| Check | Result |
+|---|---|
+| Repository and baseline commit identified | PASS — `940b4b5ad288fd70fffa1e5837f53ff6daa633c8` |
+| Feature branch exists at baseline | PASS — `feature/crash-research-repositioning` |
+| BUILD_STATUS inspected | PASS — Stage 1 recorded complete |
+| Storage keys/schema inspected | PASS — source audit |
+| Seed data/ID patterns inspected | PASS — source audit |
+| Aircraft file/hash recorded | PASS — SHA `44cd0c5b973302ac7ecef4fde79e463146a9f4df` |
+| Remote commit status | NO CHECKS REPORTED |
+| GitHub Actions runs | NONE RETURNED |
+| Local TypeScript check | NOT RUN — no local checkout/runtime |
+| Local production build | NOT RUN — no local checkout/runtime |
+| Automated tests | NOT RUN — no test script/framework configured |
+| Fresh browser boot | NOT RUN — browser runtime unavailable |
+| Pristine v1 fixture | BLOCKED — actual browser snapshot outstanding |
+| User-data v1 fixture | BLOCKED — actual UI/session snapshot outstanding |
+| Stage 1 UI smoke | NOT RUN — browser runtime unavailable |
+| 390/768/1440 light/dark screenshots | NOT RUN — browser runtime unavailable |
+| Aircraft diff guard | Baseline SHA recorded; no source edits in Phase 1 |
 
-## Phase 1 notes
-
-No application source was edited and no migration was executed. The fixture and browser-dependent checks remain explicit blockers rather than being reported as passes.
+No application source was edited. No migration was executed. Browser-dependent checks are not represented as passing.

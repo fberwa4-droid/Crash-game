@@ -1,0 +1,173 @@
+# COMMONS: FULL-PLATFORM FRONTEND, BUILT IN STAGES
+
+You are a senior social-media product designer, UX architect and front-end engineer with strong motion-design skills. You are building the complete frontend of **Commons** (temporary name), a social network for intellectual exploration: people share ideas, discuss research and think together in public. Its interaction model follows X (Twitter) without copying X's branding, logo, copy or icons. It must feel like a genuine, living social network, NOT a SaaS dashboard, an LMS, an academic management system or a corporate productivity tool. The feed is the heart of the product.
+
+The entire platform is in scope. It is built in seven stages. This document holds the full specification so that every foundation you lay in Stage 1 already fits Stages 2 to 7.
+
+## 0. STAGING PROTOCOL (read first)
+1. In this run, build **Stage 1 only** (Foundation + Landing Page), but build its foundations (data layer, schema, services, auth, UI kit, routing) so later stages only add to them.
+2. When Stage 1 is complete, update `BUILD_STATUS.md` (see section 7), run the Stage 1 acceptance checklist, summarize what exists, and STOP. Do not start Stage 2 until I send "Proceed to Stage 2" (and so on for each stage).
+3. Every later stage must preserve all previously completed functionality. Never delete, rewrite or restructure working code unless a stage requires it, and never silently drop a feature. Schema changes are additive and versioned (section 2.4). Before finishing any stage, re-test every earlier stage's acceptance checklist.
+4. Routes belonging to stages not yet built render a clean temporary stub ("This section arrives in Stage N") inside the real app shell or landing navigation. Each stage replaces its own stubs. No stub may remain after Stage 7.
+
+## 1. PRODUCT FACTS AND DECISIONS (fixed, do not contradict)
+- Name: Commons (temporary). Define `PLATFORM_NAME = "Commons"` and `POST_CHAR_LIMIT = 500` in `src/config.ts`. Never hard-code them elsewhere; read the name through a `useBrand()` hook so an admin setting can override it.
+- Content is multidisciplinary (science, humanities, technology, economics, mathematics, ethics, history of ideas and more).
+- Posts are limited to 500 characters; longer work belongs in the Library.
+- Feeds: "For you" is a mixed feed; "Following" shows only posts (and reposts) from followed accounts.
+- Guests can browse everything public but must register to interact (like, repost, quote, reply, bookmark, follow, post, submit research, report).
+- Any registered member can submit research to the Library. Every submission requires approval by a moderator or admin before it is public.
+- Identities are public. No anonymous posting. No direct messages anywhere in the product.
+- Tech: React + TypeScript + Tailwind.
+- Out of scope, never build or hint at: any algorithm simulation laboratory, betting, wagering, balances, currency, odds, cash-out or any gambling mechanic. The aircraft multiplier on the landing page is purely decorative.
+
+## 2. ARCHITECTURE
+### 2.1 Stack and structure
+- React + TypeScript + Tailwind, React Router, Lucide icons. Keep dependencies minimal; no heavy animation libraries (CSS, SVG, requestAnimationFrame only).
+- Structure: `src/config.ts`, `src/styles/tokens`, `src/components/ui` (Button, IconButton, Modal, Sheet, Toast, Chip, Avatar, Badge, Tabs, Menu, ConfirmDialog, Skeleton, EmptyState), `src/components/landing`, `src/components/layout`, `src/features/{auth,feed,compose,post,profile,explore,notifications,bookmarks,library,settings,admin}`, `src/services`, `src/data` (seed + types), `src/hooks`, `BUILD_STATUS.md`.
+
+### 2.2 Mock services (the "backend")
+- All reads and writes go through typed service modules (`authService`, `postsService`, `usersService`, `followService`, `notificationsService`, `bookmarksService`, `libraryService`, `reportsService`, `adminService`, `topicsService`, `searchService`, `settingsService`). Components never touch localStorage directly.
+- Services are async (Promises with a 60 to 250ms simulated latency), return realistic errors when rules are violated (e.g. suspended user posting, over the character limit, duplicate handle), and are swappable for a real API later.
+- A central store notifies subscribers on change so the UI updates instantly everywhere (counts, badges, lists). Listen to the `storage` event so a second browser tab stays in sync.
+
+### 2.3 Persistence
+- Everything persists in localStorage under the `commons:v1:` namespace: session, users, posts, interactions, follows, notifications, bookmarks, library, reports, audit log, topics, settings, drafts, recent searches, theme.
+- Seed data is generated once on first load. Settings provides "Reset demo data" (confirm dialog) that wipes the namespace and reseeds.
+- Handle quota errors gracefully (toast, never a crash). Images are downscaled client-side (max 1280px, JPEG ~0.8) and stored as data URLs; allow up to 2 images per post.
+
+### 2.4 Schema versioning
+Keep a `schemaVersion` key. Changes between stages are additive migrations that never wipe user-created data.
+
+### 2.5 Data model (field names are guidance; keep types in `src/data/types.ts`)
+- **User**: id, handle (unique), displayName, email (unique), mockPassword, role (member | moderator | admin), status (active | suspended), bio, location, link, joinedAt, avatarSeed, bannerSeed, interestTopics[], verified, pinnedPostId.
+- **Post**: id, authorId, body (≤ limit), createdAt, kind (original | reply | repost | quote), parentId, quotedPostId, repostOfId, threadId, topicTags[], mentions[], images[], libraryDocId, status (visible | removed), views.
+- **Interactions**: likes, reposts, bookmarks (post or document), follows (user to user), topicFollows, mutes (accounts and topics). All counts are derived from stored records plus a seeded baseline, so counts always match state and never go negative.
+- **Notification**: id, recipientId, type (follow | like | repost | quote | reply | mention | library_comment | library_decision | moderation), actorIds[], targetType, targetId, createdAt, read.
+- **LibraryDoc**: id, title, type (Paper | Preprint | Essay | Dataset | Notes | Review), authorIds[], abstract, bodyMarkdown, topics[], version, createdAt, status (pending | changes_requested | rejected | published), reviewNote, fileMeta, citationData.
+- **Report**: id, targetType (post | doc), targetId, reporterIds[], reason, status (open | dismissed | actioned), resolution, createdAt.
+- **AuditEntry**: id, actorId, action, targetType, targetId, note, createdAt.
+- **Topic**: slug, name, featured, archived, mergedInto.
+- **PlatformSettings**: brandName override, registrationMode (open | invite-only, with demo invite code `COMMONS-DEMO`), char limit (displayed, fixed at 500).
+
+### 2.6 Cross-feature side effects (must be real)
+Likes, reposts, quotes, replies, follows and @mentions create notifications for the target user (never for yourself, with like and follow grouping). Moderator actions create moderation notices. Library decisions create decision notifications and change document visibility. Removing a post removes it from every feed, search result, profile and bookmark list (showing a tombstone where it is a parent in a thread). Suspending a user blocks posting and interacting with a visible banner. Muting an account or topic filters feeds. Deleting your own post cascades sensibly (replies keep a "deleted" parent tombstone).
+
+### 2.7 Ambient community simulation
+A background simulator, on by default and toggleable in Settings, makes the network feel alive: every 20 to 40 seconds it creates a new post from a seeded non-current user (drawn from a pool of at least 40 distinct, authored texts across disciplines), and occasionally likes, reposts or replies to the current user's posts and follows them, generating real notifications. It pauses when the tab is hidden and respects reduced motion for any animation it triggers.
+
+### 2.8 Auth (mock, UI-faithful)
+- Join creates a real account in localStorage (display name, unique @handle, unique email, password with show/hide, checkbox acknowledging that identities are public; if registration is invite-only, an invite code field appears). Log in validates against stored users with proper error messages. Log out works from the account menu. Session persists.
+- Seeded demo accounts for review, with one-click "Continue as demo member / moderator / admin" buttons in the auth modal (labelled demo-only). A mock disclaimer says no real credentials are used.
+
+## 3. VISUAL IDENTITY (Vercel-inspired)
+- Near-monochrome. Dark theme is the hero; light theme fully supported. Follow system preference by default, manual toggle remembered.
+- Dark: bg `#000`/`#0A0A0A`, surface `#111`, hairline `rgba(255,255,255,0.10)`, text `#EDEDED`, muted `#A1A1A1`, faint `#6B6B6B`. Light: bg `#FFF`, surface `#FAFAFA`, hairline `rgba(0,0,0,0.08)`, text `#0A0A0A`, muted `#5C5C5C`.
+- One accent, aircraft red `#E5322D` (`#FF4A44` for glows in dark). Used sparingly: primary buttons, the aircraft and trail, like hearts, unread dots, the live dot, focus accents. Never large flat fills.
+- Structure with 1px hairlines and whitespace, not shadows or heavy cards. No decorative gradients, stock illustrations or emoji icons. One icon set (Lucide, 1.5px stroke).
+- Type: Geist Sans for UI and content, Geist Mono for handles, timestamps, counts, multipliers, labels (Google Fonts, Inter/system fallback, `font-display: swap`). Fluid scale: Display 44 to 88px/600/-0.04em; Section title 28 to 48px; Lead 18 to 22px muted; Body 16px/1.6 (posts 1.55); Mono meta 12 to 13px tabular. Clear hierarchy everywhere.
+- Avatars: circular, generated initials with deterministic soft color pairs. Badge: small monochrome "verified contributor" mark.
+- Motion: 120 to 240ms, easing `cubic-bezier(0.2,0.7,0.2,1)`, everything honoring `prefers-reduced-motion`.
+
+## 4. APP SHELL AND NAVIGATION (built in Stage 2, defined here)
+- Desktop (≥1100px): three columns. Left rail: wordmark, Home, Explore, Notifications (live unread badge), Bookmarks, Library, Profile, Settings, Admin (moderators and admins only), red "Post" button, account menu (switch/log out). Center column ≤600px with sticky top bar and tabs. Right rail: search, "Who to follow" (3), "Trending topics" (5), small footer. No analytics widgets or dashboard cards.
+- Tablet (700 to 1099px): icon-only left rail, no right rail (search lives in Explore).
+- Mobile (<700px): single column, bottom tab bar (Home, Explore, Notifications, Library, Profile), floating red compose button, left drawer for Bookmarks, Settings, theme. Tap targets ≥44px.
+- Guests see the same shell with "Log in / Join" in place of the account menu; interactions open the join gate (a contextual modal: "Join Commons to like this post").
+
+## 5. ROLES AND PERMISSIONS
+Guest (browse only), Member, Moderator (Reports, Content, Library review), Admin (everything). Enforce in services and UI. `/admin` for unauthorized users shows an "You don't have access" screen. Routes:
+`/` landing · `/home` · `/post/:id` · `/explore` (supports `?q=` and `?topic=`) · `/notifications` · `/bookmarks` · `/u/:handle` (+ `/followers`, `/following`) · `/library` · `/library/:id` · `/library/new` · `/settings` · `/admin/{reports,users,content,library,topics,audit,settings}` · `/about`, `/guidelines`, `/terms`, `/privacy` (short, original, real static pages).
+
+## 6. THE STAGES
+
+### STAGE 1: Foundation + Landing Page  ← BUILD THIS NOW
+Build: config, tokens, theme toggle, fonts, shared UI kit, router with stubs for later routes, the complete data layer (types, services, store, seed for users/posts/topics, ambient simulator scaffolding), working mock auth (section 2.8), the reusable `PostCard` (fully interactive with the real services, section 6/Stage 2 behaviors that are possible without the shell), and the landing page below. Everything on the landing page must work.
+
+**Top navigation (sticky):** original wordmark (e.g. a lowercase semi-bold "commons" with a small abstract mark, no resemblance to X) left; center links Explore, Library, How it works, Principles (in-page links smooth-scroll; Explore and Library go to routes); right: theme toggle, Log in (ghost), Join Commons (red). Transparent at top; after 8px scroll gains backdrop blur, translucent bg, hairline, optional thin red scroll-progress line. Mobile: wordmark + Join + menu button; menu opens a full-height right sheet with large links, theme toggle, Log in, Join; focus trapped, Esc closes, body scroll locked. If logged in, show an avatar menu and "Open Commons" instead of Join.
+
+**Hero (text ABOVE the animation), centered, staggered fade-rise on load:** pill label with pulsing red dot ("Open to everyone, thinking in public"); display headline "Think out loud. Together." with the last word accented (red underline stroke or red, no gradient); lead paragraph ("Commons is a public square for ideas, research and the questions in between. Post a thought, follow curious minds, and publish work that others can build on."); buttons `Join Commons` (red, nudging arrow) and `Browse the feed` (outline, to `/home`); mono line "Guests can read everything. Join to reply, like and post." Text never overlaps the animation.
+
+**Hero aircraft animation (signature element; purely visual):** an original SVG red single-engine propeller aircraft in side view with vintage sport-plane character (rounded fuselage, round cowl, canopy highlight, single curved wing, tailplane and fin, tiny landing gear; two-tone red, thin light outline for dark backgrounds). NOT a commercial airliner; do not reproduce any existing game's artwork. Two-blade propeller spinning at about 1800°/s over a translucent motion-blur disc.
+- Stage ~16:9 desktop (min 420px, max 560px), ~4:5 mobile, hairline border, 16px radius, faint inner grid; left axis with mono ticks (1x, 2x, 5x, 10x, 25x), baseline.
+- The aircraft starts lower-left and climbs diagonally up-right along a smooth curve that begins shallow and steepens, rotating to the path tangent with a gentle wobble and bob. A thin red trail (~2.5px) follows; the area under the trail fills with a soft red-to-transparent gradient with faint glow in dark mode. Parallax cloud/wind streaks (2 to 3 layers, low opacity) and fading exhaust puffs add speed.
+- Multiplier readout in Geist Mono (`1.00x`, tabular numbers, no layout shift, clamp 48 to 120px), tinting from white toward red as it climbs, caption "virtual multiplier". Exponential feel over ~9s from 1.00x to ~25x (`m(t)=e^(kt)` mapped so path progress matches); two decimals below 10x, one decimal at or above. Milestone pills (2.00x, 5.00x, 10x, 25x) pop beside the trail then fade.
+- Loop: when the aircraft exits top-right, fade trail and readout (~400ms), hold ~1.2s empty, replay. No crash, no explosion, no win/loss text, no sound. NO bet inputs, balances, currency, odds, cash-out or wagering language.
+- One `requestAnimationFrame` loop driven by elapsed time; pause when off-screen (IntersectionObserver) or tab hidden; recompute the path from measured size (ResizeObserver) so it flies corner to corner at any width; mobile: aircraft 30 to 40% smaller, three ticks, readout centered upper. Stage is `aria-hidden`. Under `prefers-reduced-motion`: static frame mid-flight at ~4.2x with a short static trail, no spin, no loop.
+
+**"Ideas in motion" live strip:** heading with mono `LIVE` and pulsing red dot. Real `PostCard`s from seeded data; a new post slides in every 6 to 10s (max 4 visible, smooth height transition), pausing on hover/focus/off-screen/reduced motion (static list then). Desktop three-column layout, tablet two, mobile one. Caption "Preview of the For you feed." Cards are fully interactive with the real services: guests hit the join gate; logged-in members really like/repost/bookmark.
+
+**"Two ways to read":** segmented control `For you` / `Following`; switching animates a 3-post mini-feed. For you = mixed accounts; Following = only accounts marked "Following". Short captions for each.
+
+**How it works (3 blocks with miniature working UI, no stock imagery):** (1) "Say it in 500 characters": a real textarea with live character-count ring (turns red at the limit; submit opens the join gate for guests, or posts for members); (2) "Publish real research": mini Library submission card animating through Submitted → Reviewed by a moderator → Published on scroll-in, caption "Any member can submit. Every submission is reviewed before it goes public."; (3) "Follow minds, not metrics": 3 sample accounts with working Follow buttons (gate for guests, real follows for members). Three hairline-separated columns on desktop; snap carousel with dots on mobile.
+
+**Topics band:** two-row marquee in opposite directions (pause on hover, edge fade masks, static wrap on reduced motion) of mono hairline chips: Epistemology, Machine Learning, Neuroscience, Philosophy of Science, Economics, Complex Systems, Open Science, Mathematics, History of Ideas, Ethics of Technology, Methodology, Climate, Linguistics, Cryptography, Urban Planning, Evolutionary Biology, Political Theory, Music Theory. Clicking a chip goes to `/explore?topic=slug` for logged-in users and guests alike (guests can browse topics; the Follow-topic button inside is gated).
+
+**Principles section:** large typographic numbered statements: Public identities; Conversation in the open (no direct messages); Reviewed research; Short posts, long work (500 characters, Library for substance). Subtle once-only scroll reveals.
+
+**Final CTA and footer:** large statement ("The next good idea is probably in a conversation you haven't had yet.") with both buttons and a faint static echo of the aircraft trail; footer with wordmark, descriptor, link columns (Product: Explore, Library, How it works · Community: Principles, Guidelines · Legal: Terms, Privacy, About), theme toggle, `© Commons`. Footer links go to the real static pages.
+
+**Responsive:** breakpoints 0 to 639 / 640 to 1023 / 1024+, content max 1200px (hero text 880px). No horizontal scroll from 320px. Safe-area insets on notched phones.
+
+**Stage 1 acceptance checklist:** headline and CTAs fully above the animation at every width; aircraft climbs, tilts, propeller spins, trail and fill drawn, multiplier rising and looping cleanly; no gambling UI anywhere; Join, Log in, demo logins, Log out and theme toggle all work and persist; guest gate on every interactive control; members' likes/follows persist across reloads; light and dark both deliberate; reduced motion calm and complete; `PLATFORM_NAME` and `POST_CHAR_LIMIT` come only from config; `PostCard` reusable; temporary stubs clean.
+
+### STAGE 2: App shell, Home feed, Compose, Post detail
+- Shell and navigation per section 4, with working active states, badges and account menu.
+- **Home:** tabs For you / Following, sticky header, inline composer, infinite scroll with skeletons and end-of-feed message, "N new posts" pill fed by the ambient simulator (clicking prepends with a gentle slide-in), muted accounts/topics respected. Feed items: original, reply preview ("Replying to @handle"), repost header ("X reposted"), quote-post (nested card), research-linked post (embedded Library card).
+- **PostCard actions (all real):** Reply (opens composer), Repost menu (Repost / Undo repost / Quote), Like (optimistic, red heart pop), Bookmark (toast "Added to bookmarks", undo), Share (copies link, toast), views. Card click opens post detail; avatar/name open profile; interactive children never trigger card navigation. Overflow menu: Follow/Unfollow, Copy link, Mute account, Report (reason dialog, creates a real report), Delete (own posts, with confirm).
+- **Composer:** auto-growing textarea, #topic and @mention parsing and styling with autocomplete for mentions, topic picker, attach Library document (picker of published docs), attach up to 2 images, 500-char limit with count ring, add-another-post for threads, drafts auto-saved, discard confirmation, desktop modal and mobile full-screen sheet; reply and quote variants show the referenced post. Suspended users see a disabled composer with an explanation.
+- **Post detail:** large focused post, full timestamp, views, engagement summary (Reposts, Quotes, Likes, Bookmarks), action row, inline reply composer, threaded replies (one nesting level with "Show N more replies"), self-reply thread line.
+- Keyboard shortcuts: `j`/`k` move between posts, `l` like, `r` reply, `b` bookmark, `n` new post, `/` focus search, `?` help dialog.
+- Acceptance: everything persists across reload; counts consistent between feed, detail and profile; Stage 1 still works.
+
+### STAGE 3: Profiles, social graph, Explore and search
+- **Profile** `/u/:handle`: banner (generated pattern), avatar, name, badge, handle, bio, location, link, join date, interest chips, clickable follower/following counts, Follow button ("Following" → "Unfollow" in red outline on hover). Own profile: Edit profile modal (name, bio, location, link, interests, avatar color seed) that persists. Tabs: Posts, Replies, Library (their published documents; own pending items visible only to self), Likes. Pinned post support. 404 state for unknown handles.
+- `/followers` and `/following` pages with user rows and working Follow buttons. "Who to follow" excludes followed and self.
+- **Explore:** prominent search, live dropdown (people, topics, posts, documents) while typing, recent searches (clearable), results page with tabs Top / Latest / People / Topics / Library and matched-term highlighting. Empty state: trending topics, "Active discussions" (high reply counts), suggested people rows, featured Library documents. Topic page: header, Follow-topic button (persists), topic-filtered feed.
+- Acceptance: following changes the Following feed immediately; search covers all content types; Stages 1 to 2 intact.
+
+### STAGE 4: Notifications, Bookmarks, Settings
+- **Notifications:** tabs All / Mentions; rows for every type in the schema; grouping ("Ada and 12 others liked your post"); unread red dot and tint; "Mark all as read"; clicking navigates and marks read; live updates from real interactions and the simulator; moderation notices show the reason.
+- **Bookmarks:** tabs Posts and Documents, search within, empty states, un-bookmark with undo toast.
+- **Settings:** Profile (same editor), Account (change display name/email/password, mock; delete account with confirm that removes the user's data sensibly), Appearance (theme), Notification toggles that truly suppress new notifications of each type, Muted accounts and topics (unmute works), Demo controls (role switcher among demo accounts, simulated-activity toggle, Reset demo data).
+- Acceptance: toggles and mutes visibly change behavior; Stages 1 to 3 intact.
+
+### STAGE 5: Research Library
+- Must look like part of the same social product (same type, borders, density), not an academic portal.
+- **Index** `/library`: search, filter chips (Topic; Type; Sort: Recent / Most discussed / Most saved), document rows (large title, author avatars, type tag, topic tags, abstract excerpt, mono meta). Only published documents are public.
+- **Document page:** title, authors, type, version, date, abstract, reading view (headings, figure placeholder, citation list), sticky side panel (desktop) / bottom bar (mobile): Save (bookmark), Share, Cite (copy citation in BibTeX or APA via a small menu), Download (generates a real Markdown file from the document via Blob), and "Discuss": linked posts and replies shown as live conversation with `PostCard`, plus a composer that creates a post linked to the document and notifies authors.
+- **Submission** `/library/new` (any logged-in member): 4-step form (Details, Abstract, Content or mock file upload, Review and submit) with validation and saved draft. Submit creates a `pending` document; the author sees a "Pending review" status and can view or edit while pending, and sees review notes if changes are requested (editing resubmits). Pending documents are invisible to everyone else.
+- Documents can be embedded in posts as compact cards (already used by the composer).
+- Acceptance: submitting then approving (in Stage 6) publishes it everywhere; Stages 1 to 4 intact.
+
+### STAGE 6: Administration
+Keep the platform's visual language; this area may be denser and more tool-like. Slim summary strip of exactly 4 operational counts (open reports, pending library items, new users today, flagged posts), no decorative analytics.
+- **Reports:** queue table (post preview, reason, reporter count, status); right slide-over with full thread context and actions Dismiss, Remove post, Warn user, Suspend user, each requiring a note.
+- **Users:** searchable table (handle, role, status, joined, reports); actions: view profile, change role, suspend/unsuspend, toggle verified badge.
+- **Content:** recent posts with remove/restore and visibility filter.
+- **Library review:** pending queue with side-by-side preview; Approve, Request changes, Reject (note required for the last two).
+- **Topics:** create, rename, merge, archive, feature; effects appear in Explore and composer pickers.
+- **Audit log:** every moderator/admin action with actor, target, note, timestamp (admin only).
+- **Settings:** brand name override, registration open/invite-only (invite code `COMMONS-DEMO`), post character limit shown as fixed at 500.
+- Permissions: moderators access Reports, Content, Library review only; admins everything; enforced in services as well as UI. Every action writes an audit entry and produces its real downstream effect (section 2.6).
+- Acceptance: each admin action has a visible effect for the affected user; Stages 1 to 5 intact.
+
+### STAGE 7: Hardening and polish
+Full regression of every stage's checklist; consistent empty/loading/error states; confirm dialogs on all destructive actions; toasts and undo everywhere; keyboard and screen-reader pass; performance pass (virtualized or windowed long lists, memoized heavy components, no layout shift, transforms/opacity only for animation); responsive audit at 320, 390, 768, 1024, 1440px in light and dark; remove every stub; update `BUILD_STATUS.md`.
+
+## 7. NO DEAD CONTROLS AND REGRESSION RULES
+- Every visible button, link, menu item, tab, chip, toggle and form control must perform its real mock action. If a control cannot work in the current stage, it must not appear (or must lead to a clear stage stub), never a silent no-op.
+- Maintain `BUILD_STATUS.md` with: completed stages, route list, components list, services list, localStorage keys and schema version, known limitations. Update it at the end of every stage.
+- At the end of each stage: run the previous stages' acceptance checklists, fix regressions before reporting, and list in your summary what was tested.
+
+## 8. SAMPLE CONTENT (multidisciplinary, no lorem ipsum, fictional people only)
+- 14 users (varied backgrounds: computational neuroscientist, philosophy-of-science grad student, economist, systems engineer, historian of technology, self-taught ML researcher, science journalist, mathematician, linguist, climate scientist), each with a distinct voice and bio, follower counts from tens to tens of thousands; one moderator and one admin; plus a demo member.
+- 60 posts: sharp one-liners, open questions, multi-paragraph reasoning, hot takes, thread openers, reading recommendations, small corrections, humor, Library-linked posts, and several 3 to 6 message reply chains with respectful disagreement. Times range from minutes to days; engagement from single digits to thousands.
+- Seed starters (write about 10 more in the same spirit): `@mirela_okafor` "Hot take: most 'the brain is like a computer' arguments quietly assume the thing they're trying to prove. What would a fair test of the metaphor even look like? #Neuroscience #Epistemology" · `@tomas.verhagen` "Every model of human behavior is wrong in a useful direction or a harmful one. The skill is knowing which before you publish. #Economics #Methodology" · `@lin_ashworth` "The printing press didn't cause the Reformation. It made disagreement cheap to copy. Different claim, and the difference matters. #HistoryOfIdeas" · `@priya_n` "Reading group question: when a result replicates across five labs, what do we actually know that we didn't after the first one?" · `@dr_amani` reply: "Agreed, and in climate modelling the 'harmful direction' is usually overconfidence in the tails." · `@sam_ito` quote-post of the printing-press post: "So what's the modern version? Cheap to fork, cheap to forget?" · `@noor_haddad` embedding the Library essay `A Short Argument Against Naive Averaging` · `@c.bellweather` "Complex systems fail at the seams between teams, not inside them. Draw the org chart and the dependency graph on one page and watch them disagree. #ComplexSystems".
+- 10 Library documents (essay, preprint, notes, dataset, review) with abstracts and topics, two with ~400-word reading-view bodies; 25 notifications for the demo member; 8 reports in different states; 12 audit entries; 6 pending Library submissions; 18 topics (those in the landing marquee) with counts.
+- Everything respectful and non-defamatory; no real people.
+
+## 9. ACCESSIBILITY, SEO, PERFORMANCE
+Semantic landmarks, skip link, one H1 per page, visible focus rings in both themes, aria-labels on icon buttons, aria-live for toasts and new-post pill, WCAG AA contrast in both themes, full keyboard operation. Page titles and meta description built from the brand name, Open Graph tags, SVG favicon. Lazy-render below-the-fold sections; animate transforms and opacity only.
+
+# BEGIN NOW: Build Stage 1 only, then update BUILD_STATUS.md, run the Stage 1 checklist, report, and wait for "Proceed to Stage 2".

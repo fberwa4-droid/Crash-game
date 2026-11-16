@@ -1983,6 +1983,14 @@ export const SEED_AUDIT: AuditEntry[] = [
   { id: 'a_12', actorId: 'u_demo_admin', action: 'settings_update', targetType: 'settings', targetId: 'platform', note: 'Confirmed open registration and 500-char limit.', createdAt: daysAgo(40) },
 ];
 
+function withSeedProvenance<T extends object>(items: T[]): Array<T & { origin: 'seed'; seedVersion: number }> {
+  return items.map((item) => ({
+    ...item,
+    origin: 'seed' as const,
+    seedVersion: SCHEMA_VERSION,
+  }));
+}
+
 export function createSeedState(): CommonsStoreState {
   return {
     schemaVersion: SCHEMA_VERSION,
@@ -1990,19 +1998,19 @@ export function createSeedState(): CommonsStoreState {
       currentUserId: null,
       loggedInAt: null,
     },
-    users: SEED_USERS,
-    posts: SEED_POSTS,
-    likes: SEED_LIKES,
-    reposts: SEED_REPOSTS,
-    bookmarks: SEED_BOOKMARKS,
-    follows: SEED_FOLLOWS,
-    topicFollows: SEED_TOPIC_FOLLOWS,
+    users: withSeedProvenance(SEED_USERS),
+    posts: withSeedProvenance(SEED_POSTS),
+    likes: withSeedProvenance(SEED_LIKES),
+    reposts: withSeedProvenance(SEED_REPOSTS),
+    bookmarks: withSeedProvenance(SEED_BOOKMARKS),
+    follows: withSeedProvenance(SEED_FOLLOWS),
+    topicFollows: withSeedProvenance(SEED_TOPIC_FOLLOWS),
     mutes: [],
-    notifications: SEED_NOTIFICATIONS,
-    library: SEED_LIBRARY,
-    reports: SEED_REPORTS,
-    auditLog: SEED_AUDIT,
-    topics: SEED_TOPICS,
+    notifications: withSeedProvenance(SEED_NOTIFICATIONS),
+    library: withSeedProvenance(SEED_LIBRARY),
+    reports: withSeedProvenance(SEED_REPORTS),
+    auditLog: withSeedProvenance(SEED_AUDIT),
+    topics: withSeedProvenance(SEED_TOPICS),
     settings: {
       brandName: PLATFORM_NAME,
       registrationMode: 'open',

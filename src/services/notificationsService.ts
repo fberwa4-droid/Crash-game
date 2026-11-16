@@ -1,4 +1,4 @@
-import type { Notification, NotificationType } from '../data/types';
+import type { Notification, NotificationType, RecordOrigin } from '../data/types';
 import { makeId, withLatency } from './latency';
 import { getCurrentUser, store } from './store';
 
@@ -9,8 +9,9 @@ export function pushNotificationInternal(params: {
   targetType: Notification['targetType'];
   targetId: string;
   note?: string;
+  origin?: RecordOrigin;
 }): void {
-  const { recipientId, type, actorId, targetType, targetId, note } = params;
+  const { recipientId, type, actorId, targetType, targetId, note, origin = 'user' } = params;
   if (!recipientId || recipientId === actorId) return;
 
   const state = store.getState();
@@ -58,6 +59,7 @@ export function pushNotificationInternal(params: {
     createdAt: new Date().toISOString(),
     read: false,
     note,
+    origin,
   };
 
   store.setState((prev) => ({

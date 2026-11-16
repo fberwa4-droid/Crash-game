@@ -110,6 +110,7 @@ export const authService = {
         verified: false,
         baseFollowersCount: 0,
         baseFollowingCount: 0,
+        origin: 'user',
       };
 
       store.setState((prev) => ({

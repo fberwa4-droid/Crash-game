@@ -1,7 +1,14 @@
+export type RecordOrigin = 'seed' | 'user' | 'system';
+
+export interface ProvenanceMetadata {
+  origin?: RecordOrigin;
+  seedVersion?: number;
+}
+
 export type UserRole = 'member' | 'moderator' | 'admin';
 export type UserStatus = 'active' | 'suspended';
 
-export interface User {
+export interface User extends ProvenanceMetadata {
   id: string;
   handle: string;
   displayName: string;
@@ -25,7 +32,7 @@ export interface User {
 export type PostKind = 'original' | 'reply' | 'repost' | 'quote';
 export type PostStatus = 'visible' | 'removed';
 
-export interface Post {
+export interface Post extends ProvenanceMetadata {
   id: string;
   authorId: string;
   body: string;
@@ -40,6 +47,7 @@ export interface Post {
   images: string[];
   libraryDocId?: string;
   status: PostStatus;
+  tombstoneReason?: string;
   views: number;
   baseLikesCount: number;
   baseRepostsCount: number;
@@ -47,38 +55,38 @@ export interface Post {
   baseBookmarksCount: number;
 }
 
-export interface LikeRecord {
+export interface LikeRecord extends ProvenanceMetadata {
   userId: string;
   postId: string;
   createdAt: string;
 }
 
-export interface RepostRecord {
+export interface RepostRecord extends ProvenanceMetadata {
   userId: string;
   postId: string;
   createdAt: string;
 }
 
-export interface BookmarkRecord {
+export interface BookmarkRecord extends ProvenanceMetadata {
   userId: string;
   targetType: 'post' | 'doc';
   targetId: string;
   createdAt: string;
 }
 
-export interface FollowRecord {
+export interface FollowRecord extends ProvenanceMetadata {
   followerId: string;
   followingId: string;
   createdAt: string;
 }
 
-export interface TopicFollowRecord {
+export interface TopicFollowRecord extends ProvenanceMetadata {
   userId: string;
   topicSlug: string;
   createdAt: string;
 }
 
-export interface MuteRecord {
+export interface MuteRecord extends ProvenanceMetadata {
   userId: string;
   targetType: 'user' | 'topic';
   targetValue: string;
@@ -96,7 +104,7 @@ export type NotificationType =
   | 'library_decision'
   | 'moderation';
 
-export interface Notification {
+export interface Notification extends ProvenanceMetadata {
   id: string;
   recipientId: string;
   type: NotificationType;
@@ -108,10 +116,33 @@ export interface Notification {
   note?: string;
 }
 
-export type LibraryDocType = 'Paper' | 'Preprint' | 'Essay' | 'Dataset' | 'Notes' | 'Review';
+export type LibraryDocType =
+  | 'Paper'
+  | 'Preprint'
+  | 'Essay'
+  | 'Dataset'
+  | 'Notes'
+  | 'Review'
+  | 'Algorithm'
+  | 'Experiment'
+  | 'Findings';
+
 export type LibraryDocStatus = 'pending' | 'changes_requested' | 'rejected' | 'published';
 
-export interface LibraryDoc {
+export type EvidenceStatus =
+  | 'preliminary'
+  | 'replicated'
+  | 'contested'
+  | 'verified'
+  | 'theoretical';
+
+export type ReproducibilityStatus =
+  | 'reproducible'
+  | 'partial'
+  | 'not-tested'
+  | 'conceptual';
+
+export interface LibraryDoc extends ProvenanceMetadata {
   id: string;
   title: string;
   type: LibraryDocType;
@@ -133,11 +164,15 @@ export interface LibraryDoc {
     doi?: string;
   };
   baseBookmarksCount: number;
+  evidenceStatus?: EvidenceStatus;
+  methodSummary?: string;
+  dataProvenance?: string;
+  reproducibility?: ReproducibilityStatus;
 }
 
 export type ReportStatus = 'open' | 'dismissed' | 'actioned';
 
-export interface Report {
+export interface Report extends ProvenanceMetadata {
   id: string;
   targetType: 'post' | 'doc';
   targetId: string;
@@ -148,7 +183,7 @@ export interface Report {
   createdAt: string;
 }
 
-export interface AuditEntry {
+export interface AuditEntry extends ProvenanceMetadata {
   id: string;
   actorId: string;
   action: string;
@@ -158,7 +193,7 @@ export interface AuditEntry {
   createdAt: string;
 }
 
-export interface Topic {
+export interface Topic extends ProvenanceMetadata {
   slug: string;
   name: string;
   featured: boolean;

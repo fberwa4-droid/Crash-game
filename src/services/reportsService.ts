@@ -41,6 +41,7 @@ export const reportsService = {
         reason: trimmed,
         status: 'open',
         createdAt: new Date().toISOString(),
+        origin: 'user',
       };
       store.setState((prev) => ({
         ...prev,

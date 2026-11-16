@@ -47,6 +47,7 @@ export const followService = {
                 followerId: user.id,
                 followingId: targetUserId,
                 createdAt: new Date().toISOString(),
+                origin: 'user',
               },
             ],
       }));
@@ -86,7 +87,12 @@ export const followService = {
             )
           : [
               ...prev.topicFollows,
-              { userId: user.id, topicSlug: slug, createdAt: new Date().toISOString() },
+              {
+                userId: user.id,
+                topicSlug: slug,
+                createdAt: new Date().toISOString(),
+                origin: 'user',
+              },
             ],
       }));
       return !already;
@@ -103,7 +109,13 @@ export const followService = {
         ...prev,
         mutes: [
           ...prev.mutes,
-          { userId: user.id, targetType: 'user', targetValue: targetUserId, createdAt: new Date().toISOString() },
+          {
+            userId: user.id,
+            targetType: 'user',
+            targetValue: targetUserId,
+            createdAt: new Date().toISOString(),
+            origin: 'user',
+          },
         ],
       }));
     });
@@ -131,7 +143,13 @@ export const followService = {
         ...prev,
         mutes: [
           ...prev.mutes,
-          { userId: user.id, targetType: 'topic', targetValue: slug, createdAt: new Date().toISOString() },
+          {
+            userId: user.id,
+            targetType: 'topic',
+            targetValue: slug,
+            createdAt: new Date().toISOString(),
+            origin: 'user',
+          },
         ],
       }));
     });

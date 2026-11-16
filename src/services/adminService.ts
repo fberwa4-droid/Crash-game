@@ -30,6 +30,7 @@ function appendAudit(
     targetId,
     note,
     createdAt: new Date().toISOString(),
+    origin: 'user',
   };
 }
 

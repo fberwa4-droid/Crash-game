@@ -38,6 +38,7 @@ export const topicsService = {
         featured: false,
         archived: false,
         basePostCount: 0,
+        origin: 'user',
       };
       store.setState((prev) => ({
         ...prev,

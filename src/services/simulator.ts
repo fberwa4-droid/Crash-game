@@ -73,6 +73,7 @@ class AmbientCommunitySimulator {
       baseRepostsCount: Math.floor(Math.random() * 3),
       baseRepliesCount: 0,
       baseBookmarksCount: Math.floor(Math.random() * 4),
+      origin: 'system',
     };
 
     store.setState((prev) => ({
@@ -94,7 +95,15 @@ class AmbientCommunitySimulator {
         if (!alreadyLiked) {
           store.setState((prev) => ({
             ...prev,
-            likes: [...prev.likes, { userId: actor, postId: target.id, createdAt: new Date().toISOString() }],
+            likes: [
+              ...prev.likes,
+              {
+                userId: actor,
+                postId: target.id,
+                createdAt: new Date().toISOString(),
+                origin: 'system',
+              },
+            ],
           }));
           pushNotificationInternal({
             recipientId: currentUser.id,
@@ -102,6 +111,7 @@ class AmbientCommunitySimulator {
             actorId: actor,
             targetType: 'post',
             targetId: target.id,
+            origin: 'system',
           });
         }
       }

@@ -169,6 +169,7 @@ export const postsService = {
         baseRepostsCount: 0,
         baseRepliesCount: 0,
         baseBookmarksCount: 0,
+        origin: 'user',
       };
 
       store.setState((prev) => ({
@@ -265,7 +266,15 @@ export const postsService = {
         ...prev,
         likes: alreadyLiked
           ? prev.likes.filter((l) => !(l.userId === user.id && l.postId === postId))
-          : [...prev.likes, { userId: user.id, postId, createdAt: new Date().toISOString() }],
+          : [
+              ...prev.likes,
+              {
+                userId: user.id,
+                postId,
+                createdAt: new Date().toISOString(),
+                origin: 'user',
+              },
+            ],
       }));
 
       if (!alreadyLiked) {
@@ -292,9 +301,17 @@ export const postsService = {
       );
 
       store.setState((prev) => {
-        const nextReposts = alreadyReposted
+        const nextReposts: typeof prev.reposts = alreadyReposted
           ? prev.reposts.filter((r) => !(r.userId === user.id && r.postId === postId))
-          : [...prev.reposts, { userId: user.id, postId, createdAt: new Date().toISOString() }];
+          : [
+              ...prev.reposts,
+              {
+                userId: user.id,
+                postId,
+                createdAt: new Date().toISOString(),
+                origin: 'user' as const,
+              },
+            ];
 
         let nextPosts = prev.posts;
         if (alreadyReposted) {
@@ -318,6 +335,7 @@ export const postsService = {
             baseRepostsCount: 0,
             baseRepliesCount: 0,
             baseBookmarksCount: 0,
+            origin: 'user',
           };
           nextPosts = [repostEntry, ...prev.posts];
         }

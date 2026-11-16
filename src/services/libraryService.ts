@@ -1,4 +1,9 @@
-import type { LibraryDoc, LibraryDocType } from '../data/types';
+import type {
+  EvidenceStatus,
+  LibraryDoc,
+  LibraryDocType,
+  ReproducibilityStatus,
+} from '../data/types';
 import { makeId, ServiceError, withLatency } from './latency';
 import { getCurrentUser, store } from './store';
 
@@ -9,6 +14,10 @@ export interface SubmitLibraryDocInput {
   bodyMarkdown: string;
   topics: string[];
   fileMeta?: { name: string; sizeLabel: string };
+  evidenceStatus?: EvidenceStatus;
+  methodSummary?: string;
+  dataProvenance?: string;
+  reproducibility?: ReproducibilityStatus;
 }
 
 export const libraryService = {
@@ -67,6 +76,11 @@ export const libraryService = {
         fileMeta: input.fileMeta,
         citationData: { year: new Date().getFullYear(), venue: 'Commons Library' },
         baseBookmarksCount: 0,
+        evidenceStatus: input.evidenceStatus,
+        methodSummary: input.methodSummary?.trim() || undefined,
+        dataProvenance: input.dataProvenance?.trim() || undefined,
+        reproducibility: input.reproducibility,
+        origin: 'user',
       };
 
       store.setState((prev) => ({

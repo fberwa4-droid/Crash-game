@@ -36,6 +36,7 @@ export const bookmarksService = {
                 targetType,
                 targetId,
                 createdAt: new Date().toISOString(),
+                origin: 'user',
               },
             ],
       }));
